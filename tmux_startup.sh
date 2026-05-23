@@ -2,47 +2,82 @@
 
 # Check if already within tmux session to prevent infinite loop
 if [ -n "$TMUX" ]; then
-  return 0
+  if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    exit 0
+  else
+    return 0
+  fi
 fi
 
-echo "Select Session Type:"
-echo "1) Terminal Session"
-echo "2) Coding Session"
-echo "3) Standard Shell (Bypass)"
-read -p "Choice (1/2/3): " choice
+# Fetch active tmux sessions
+active_sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null)
 
-case $choice in
-  1)
+# Build menu options
+options="[New] Terminal Session\n[New] Coding Session\n[Bypass] Standard Shell"
+
+if [ -n "$active_sessions" ]; then
+  options="$options\n$active_sessions"
+fi
+
+choice=$(echo -e "$options" | fzf --prompt="Select Session ❯ " --height=40% --layout=reverse --border --info=hidden)
+
+case "$choice" in
+  "[New] Terminal Session")
     # TERMINAL SESSION
+    while true; do
+      read -p $'\e[1;33mEnter session name (default: Terminal): \e[0m' custom_name
+      session_name=${custom_name:-Terminal}
+
+      if tmux has-session -t "$session_name" 2>/dev/null; then
+        echo -e "\e[1;31mSession '$session_name' already exists. Choose a different name.\e[0m"
+      else
+        break
+      fi
+    done
     # Start tmux session with 3 panes, 1 large and 2 vertically stacked
-    tmux new-session -d -s "Terminal"
-    tmux split-window -h -l 33% -t "Terminal:0.0"
-    tmux split-window -v -l 1% -t "Terminal:0.1"
+    tmux new-session -d -s "$session_name"
+    tmux split-window -h -l 33% -t "$session_name:0.0"
+    tmux split-window -v -l 1% -t "$session_name:0.1"
     # Run script to fetch upcoming due tasks from Notion database (notion_daily.sh)
-    tmux send-keys -t "Terminal:0.2" "notion_daily.sh &" C-m
-    tmux select-pane -t "Terminal:0.0"
-    tmux attach-session -t "Terminal"
+    tmux send-keys -t "$session_name:0.2" "notion_daily.sh &" C-m
+    tmux select-pane -t "$session_name:0.0"
+    tmux attach-session -t "$session_name"
     ;;
-  2)
+  "[New] Coding Session")
     # CODING SESSION
     # cd into workspace directory, where all coding projects are stored
+    while true; do
+      read -p $'\e[1;33mEnter session name (default: Coding): \e[0m' custom_name
+      session_name=${custom_name:-Coding}
+
+      if tmux has-session -t "$session_name" 2>/dev/null; then
+        echo -e "\e[1;31mSession '$session_name' already exists. Choose a different name.\e[0m"
+      else
+        break
+      fi
+    done
+
     WORKSPACE_DIR="$HOME/workspace"
     cd "$WORKSPACE_DIR" || exit
+
     # Start tmux session with 4 panes, 1 large and 3 vertically stacked
-    tmux new-session -d -s "Coding" -c "$WORKSPACE_DIR"
-    tmux split-window -h -l 33% -t "Coding:0.0" -c "$WORKSPACE_DIR"
-    tmux split-window -v -l 50% -t "Coding:0.1" -c "$WORKSPACE_DIR"
-    tmux split-window -v -l 25% -t "Coding:0.2" -c "$WORKSPACE_DIR"
+    tmux new-session -d -s "$session_name" -c "$WORKSPACE_DIR"
+    tmux split-window -h -l 33% -t "$session_name:0.0" -c "$WORKSPACE_DIR"
+    tmux split-window -v -l 50% -t "$session_name:0.1" -c "$WORKSPACE_DIR"
+    tmux split-window -v -l 25% -t "$session_name:0.2" -c "$WORKSPACE_DIR"
     # Launch LunarVim in the large left pane
-    tmux send-keys -t "Coding:0.0" "lvim ." C-m
+    tmux send-keys -t "$session_name:0.0" "lvim ." C-m
     # Run script to fetch upcoming due tasks from Notion database (notion_daily.sh)
-    tmux send-keys -t "Coding:0.3" "notion_daily.sh &" C-m
+    tmux send-keys -t "$session_name:0.3" "notion_daily.sh &" C-m
     # Return focus to LunarVim
-    tmux select-pane -t "Coding:0.0"
-    tmux attach-session -t "Coding"
+    tmux select-pane -t "$session_name:0.0"
+    tmux attach-session -t "$session_name"
     ;;
-  *)
+  "[Bypass] Standard Shell" | "")
     # Bypass selection and drop into standard terminal
     echo "Starting standard shell."
+    ;;
+  *)
+    tmux attach-session -t "$choice"
     ;;
 esac
