@@ -36,12 +36,14 @@ case "$choice" in
     done
 
     # Prompt for target directory
-    read -e -p $'\e[1;33m Enter target directory (default: ~): \e[0m]' target_input
+    read -e -p $'\e[1;33m Enter target directory (default: ~): \e[0m' target_input
     TARGET_DIR="${target_input:-$HOME}"
     TARGET_DIR="${TARGET_DIR/#\~/$HOME}"
 
     mkdir -p "$TARGET_DIR"
     cd "$TARGET_DIR" || exit
+
+    TARGET_DIR="$PWD"
 
     # Start tmux session with 3 panes, 1 large and 2 vertically stacked
     tmux new-session -d -s "$session_name" -c "$TARGET_DIR"
