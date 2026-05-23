@@ -34,10 +34,19 @@ case "$choice" in
         break
       fi
     done
+
+    # Prompt for target directory
+    read -e -p $'\e[1;33m Enter target directory (default: ~): \e[0m]' target_input
+    TARGET_DIR="${target_input:-$HOME}"
+    TARGET_DIR="${TARGET_DIR/#\~/$HOME}"
+
+    mkdir -p "$TARGET_DIR"
+    cd "$TARGET_DIR" || exit
+
     # Start tmux session with 3 panes, 1 large and 2 vertically stacked
-    tmux new-session -d -s "$session_name"
-    tmux split-window -h -l 33% -t "$session_name:0.0"
-    tmux split-window -v -l 1% -t "$session_name:0.1"
+    tmux new-session -d -s "$session_name" -c "$TARGET_DIR"
+    tmux split-window -h -l 33% -t "$session_name:0.0" -c "$TARGET_DIR"
+    tmux split-window -v -l 10% -t "$session_name:0.1" -c "$TARGET_DIR"
     # Run script to fetch upcoming due tasks from Notion database (notion_daily.sh)
     tmux send-keys -t "$session_name:0.2" "notion_daily.sh &" C-m
     tmux select-pane -t "$session_name:0.0"
@@ -60,11 +69,32 @@ case "$choice" in
     WORKSPACE_DIR="$HOME/workspace"
     cd "$WORKSPACE_DIR" || exit
 
+    # Directory selection via fzf
+    existing_dirs=$(find "$WORKSPACE_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null)
+    dir_options="[Create New Project]"
+    if [ -n "$existing_dirs" ]; then
+      dir_options="$dir_options\n$existing_dirs"
+    fi
+
+    dir_choice=$(echo -e "$dir_options" | fzf --prompt="Select Project ❯ " --height=40% --layout=reverse --border --info=hidden)
+
+    if [ "$dir_choice" == "[Create New Project]" ]; then
+      read -p $'\e[1;33mEnter new project name: \e[0m' new_project_name
+      TARGET_DIR="$WORKSPACE_DIR/${new_project_name:-untitled_project}"
+      mkdir -p "$TARGET_DIR"
+    elif [ -z "$dir_choice" ]; then
+      TARGET_DIR="$WORKSPACE_DIR"
+    else
+      TARGET_DIR="$WORKSPACE_DIR/$dir_choice"
+    fi
+
+    cd "$TARGET_DIR" || exit
+
     # Start tmux session with 4 panes, 1 large and 3 vertically stacked
-    tmux new-session -d -s "$session_name" -c "$WORKSPACE_DIR"
-    tmux split-window -h -l 33% -t "$session_name:0.0" -c "$WORKSPACE_DIR"
-    tmux split-window -v -l 50% -t "$session_name:0.1" -c "$WORKSPACE_DIR"
-    tmux split-window -v -l 25% -t "$session_name:0.2" -c "$WORKSPACE_DIR"
+    tmux new-session -d -s "$session_name" -c "$TARGET_DIR"
+    tmux split-window -h -l 33% -t "$session_name:0.0" -c "$TARGET_DIR"
+    tmux split-window -v -l 50% -t "$session_name:0.1" -c "$TARGET_DIR"
+    tmux split-window -v -l 25% -t "$session_name:0.2" -c "$TARGET_DIR"
     # Launch LunarVim in the large left pane
     tmux send-keys -t "$session_name:0.0" "lvim ." C-m
     # Run script to fetch upcoming due tasks from Notion database (notion_daily.sh)
