@@ -19,7 +19,49 @@ if [ -n "$active_sessions" ]; then
   options="$options\n$active_sessions"
 fi
 
-choice=$(echo -e "$options" | fzf --prompt="Select Session ❯ " --height=40% --layout=reverse --border --info=hidden)
+choice=$(echo -e "$options" | fzf \
+  --prompt="Select Session ❯ " \
+  --height=50% \
+  --layout=reverse \
+  --border \
+  --info=hidden \
+  --preview-window=right:50% \
+  --preview '
+    case {} in
+      "[New] Terminal Session")
+        echo -e "\n  \e[1;36mTERMINAL SESSION LAYOUT\e[0m\n"
+        echo -e "  [ Large Left Pane ]  [ Small Right Top    ]"
+        echo -e "  [                 ]  [ Standard Shell     ]"
+        echo -e "  [ Interactive     ]  ----------------------"
+        echo -e "  [ Shell           ]  [ Small Right Bottom ]"
+        echo -e "  [                 ]  [ notion_daily.sh    ]"
+        ;;
+      "[New] Coding Session")
+        echo -e "\n  \e[1;35mCODING SESSION LAYOUT\e[0m\n"
+        echo -e "  [ Large Left Pane ]  [ Small Right Top    ]"
+        echo -e "  [                 ]  [ Standard Shell     ]"
+        echo -e "  [ LunarVim        ]  ----------------------"
+        echo -e "  [ (lvim .)        ]  [ Small Right Middle ]"
+        echo -e "  [                 ]  [ Standard Shell     ]"
+        echo -e "  [                 ]  ----------------------"
+        echo -e "  [                 ]  [ Small Right Bottom ]"
+        echo -e "  [                 ]  [ notion_daily.sh    ]"
+        ;;
+      "[Bypass] Standard Shell")
+        echo -e "\n  \e[1;32mBYPASS INITIALIZATION\e[0m\n"
+        echo -e "  Drops directly into a standard, un-multiplexed"
+        echo -e "  interactive bash shell."
+        ;;
+      "")
+        echo "No selection."
+        ;;
+      *)
+        echo -e "\n  \e[1;33mEXISTING TMUX SESSION: {}\e[0m\n"
+        echo -e "  Active Windows & Panes:\n"
+        tmux list-windows -t "{}" 2>/dev/null || echo "  Could not fetch session details."
+        ;;
+    esac
+  ')
 
 case "$choice" in
   "[New] Terminal Session")
@@ -57,6 +99,9 @@ case "$choice" in
   "[New] Coding Session")
     # CODING SESSION
     # cd into workspace directory, where all coding projects are stored
+    export WORKSPACE_DIR="$HOME/workspace"
+    mkdir -p "$WORKSPACE_DIR"
+    
     while true; do
       read -p $'\e[1;33mEnter session name (default: Coding): \e[0m' custom_name
       session_name=${custom_name:-Coding}
@@ -68,29 +113,71 @@ case "$choice" in
       fi
     done
 
-    WORKSPACE_DIR="$HOME/workspace"
-    cd "$WORKSPACE_DIR" || exit
+    CURRENT_BROWSE_DIR="$WORKSPACE_DIR"
 
     # Directory selection via fzf
-    existing_dirs=$(find "$WORKSPACE_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null)
-    dir_options="[Create New Project]"
-    if [ -n "$existing_dirs" ]; then
-      dir_options="$dir_options\n$existing_dirs"
-    fi
+    while true; do
+      existing_dirs=$(find "$CURRENT_BROWSE_DIR" -mindepth 1 -maxdepth 1 -type d \( -name '.*' -o -name 'node_modules' -o -name 'venv' \) -prune -o -type d -exec basename {} \; | sort 2>/dev/null)
+  
+      dir_options="[Select This Directory]\n[Create New Project Here]"
 
-    dir_choice=$(echo -e "$dir_options" | fzf --prompt="Select Project ❯ " --height=40% --layout=reverse --border --info=hidden)
+      if [ "$CURRENT_BROWSE_DIR" != "$WORKSPACE_DIR" ]; then
+        dir_options="$dir_options\n[Go Up One Level]"
+      fi
 
-    if [ "$dir_choice" == "[Create New Project]" ]; then
-      read -p $'\e[1;33mEnter new project name: \e[0m' new_project_name
-      TARGET_DIR="$WORKSPACE_DIR/${new_project_name:-untitled_project}"
-      mkdir -p "$TARGET_DIR"
-    elif [ -z "$dir_choice" ]; then
-      TARGET_DIR="$WORKSPACE_DIR"
-    else
-      TARGET_DIR="$WORKSPACE_DIR/$dir_choice"
-    fi
+      if [ -n "$existing_dirs" ]; then
+        dir_options="$dir_options\n$existing_dirs"
+      fi
+
+      display_path="${CURRENT_BROWSE_DIR/#$HOME/\~}"
+
+      dir_choice=$(echo -e "$dir_options" | fzf \
+        --prompt="Browse ❯ $display_path/ ❯ " \
+        --height=50% \
+        --layout=reverse \
+        --border \
+        --info=hidden \
+        --preview-window=right:50% \
+        --preview '
+          dir={}
+          if [ "$dir" = "[Select This Directory]" ]; then
+            echo -e "\n \e[1;32mUse Current Directory\e[0m\n\n  Target: '"$CURRENT_BROWSE_DIR"'"
+          elif [ "$dir" = "[Create New Project Here]" ]; then
+            echo -e "\n  \e[1;33mCreate New Project Directory\e[0m\n\n  Creates a new subdirectory inside:\n  '"$CURRENT_BROWSE_DIR"' "
+          elif [ "$dir" = "[Go Up One Level]" ]; then
+            echo -e "\n \e[1;36mGo Up\e[0m\n\n  Return to: '"$(dirname "$CURRENT_BROWSE_DIR")"'"
+          elif [ -n "$dir" ]; then
+           echo -e "\n  \e[1;34mContents of $dir:\e[0m\n"
+            ls -la --color=always '"$CURRENT_BROWSE_DIR"'/"$dir" 2>/dev/null || ls -la '"$CURRENT_BROWSE_DIR"'/"$dir"
+          fi
+        ')
+
+      case "$dir_choice" in 
+        "[Select This Directory]")
+          TARGET_DIR="$CURRENT_BROWSE_DIR"
+          break
+          ;;
+        "[Create New Project Here]")
+          read -p $'\e[1;33mEnter new project name: \e[0m' new_project_name
+          TARGET_DIR="$CURRENT_BROWSE_DIR/${new_project_name:-untitled_project}"
+          mkdir -p "$TARGET_DIR"
+          break
+          ;;
+        "[Go Up One Level]")
+          CURRENT_BROWSE_DIR=$(dirname "$CURRENT_BROWSE_DIR")
+          ;;
+        "")
+          TARGET_DIR="$WORKSPACE_DIR"
+          break
+          ;;
+        *)
+          CURRENT_BROWSE_DIR="$CURRENT_BROWSE_DIR/$dir_choice"
+          ;;
+      esac
+    done
 
     cd "$TARGET_DIR" || exit
+    TARGET_DIR="$PWD"
 
     # Start tmux session with 4 panes, 1 large and 3 vertically stacked
     tmux new-session -d -s "$session_name" -c "$TARGET_DIR"
