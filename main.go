@@ -247,6 +247,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case dirScanMsg:
 		cmd = m.dirList.SetItems(msg)
+    m.dirList.Select(0)
 		return m, cmd
 
 	case errMsg:
