@@ -80,6 +80,7 @@ type PaneConfig struct {
 type genericItem struct {
 	title string
 	desc  string
+  path  string
 }
 
 // tracks which screen is currently active
@@ -94,9 +95,10 @@ const (
 type model struct {
 	// --- UI Components ---
 	// Each list will maintain its own cursor positions and filtering states
-	sessionList list.Model
-	dirList     list.Model
-	textInput   textinput.Model
+	sessionList    list.Model
+	dirList        list.Model
+	textInput      textinput.Model
+  previewContent string
 
 	// --- App State ---
 	activeView       viewState
@@ -255,14 +257,57 @@ func readDir(targetPath string, isRoot bool) tea.Cmd {
 				continue
 			}
 
+      fullPath := filepath.Join(targetPath, name)
 			items = append(items, genericItem{
 				title: name,
-				desc:  filepath.Join(targetPath, name),
+				desc:  fullPath,
+        path:  fullPath,
 			})
 		}
 
 		return dirScanMsg(items)
 	}
+}
+
+func generatePreview(path string) string {
+  if path == "" {
+    return lipgloss.NewStyle().Foreground(textSubtle).Render("No preview available")
+  }
+
+  info, err := os.Stat(path)
+  if err != nil || !info.IsDir() {
+    return lipgloss.NewStyle().Foreground(textSubtle).Render("Invalid directory")
+  }
+
+  entries, err := os.ReadDir(path)
+	if err != nil {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Render("Permission Denied.")
+	}
+
+	var sb strings.Builder
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Foreground(highlight).Render(filepath.Base(path)) + "\n\n")
+
+	if len(entries) == 0 {
+		sb.WriteString(lipgloss.NewStyle().Foreground(textSubtle).Render("Directory is empty."))
+		return sb.String()
+	}
+
+	// Show up to 15 items in the preview
+	displayLimit := 15
+	for i, e := range entries {
+		if i >= displayLimit {
+			sb.WriteString(lipgloss.NewStyle().Foreground(textSubtle).Render(fmt.Sprintf("\n... and %d more items", len(entries)-displayLimit)))
+			break
+		}
+
+		icon := "📄 "
+		if e.IsDir() {
+			icon = "📁 "
+		}
+		sb.WriteString(fmt.Sprintf("%s%s\n", icon, e.Name()))
+	}
+
+	return sb.String()
 }
 
 func (m model) Init() tea.Cmd {
@@ -287,12 +332,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height - appH - panelH - headerAndFooterHeight
 
 		m.sessionList.SetSize(m.width, m.height)
-		m.dirList.SetSize(m.width, m.height)
+		m.dirList.SetSize(m.width/2, m.height)
 		return m, nil
 
 	case dirScanMsg:
 		cmd = m.dirList.SetItems(msg)
     m.dirList.Select(0)
+
+    if i, ok := m.dirList.SelectedItem().(genericItem); ok {
+      m.previewContent = generatePreview(i.path)
+    }
 		return m, cmd
 
 	case errMsg:
@@ -321,7 +370,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.dirList.Title = "Browse ❯ " + m.currentBrowseDir
 
 					return m, readDir(m.currentBrowseDir, m.currentBrowseDir == m.workspaceDir)
-				}
+        }
 
 			// Step 2: User selects a directory
 			case viewDirBrowse:
@@ -377,10 +426,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.activeView {
 	case viewSessionSelect:
 		m.sessionList, cmd = m.sessionList.Update(msg)
+    cmds = append(cmds, cmd)
+
 	case viewDirBrowse:
+    oldIndex := m.dirList.Index()
 		m.dirList, cmd = m.dirList.Update(msg)
+    cmds = append(cmds, cmd)
+
+  if m.dirList.Index() != oldIndex {
+      if i, ok := m.dirList.SelectedItem().(genericItem); ok {
+        m.previewContent = generatePreview(i.path)
+      }
+    }
 	case viewNameInput:
 		m.textInput, cmd = m.textInput.Update(msg)
+    cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -398,8 +458,26 @@ func (m model) View() tea.View {
 
 	case viewDirBrowse:
 		headerTitle = " YGGDRASIL | Target Directory "
-		activeContent = panelStyle.Render(m.dirList.View())
+		
+		// Define the style for the right-hand preview pane
+		previewPaneStyle := lipgloss.NewStyle().
+			Width(m.width / 2).        // Consume the remaining 50% of the space
+			Height(m.height).          // Match the list height
+			Border(lipgloss.NormalBorder(), false, false, false, true). // Left border only
+			BorderForeground(borderSubtle).
+			Padding(0, 1, 0, 2)
+			
+		// Render the preview text inside the pane
+		previewPane := previewPaneStyle.Render(m.previewContent)
 
+		
+		// Render the list
+		listPane := m.dirList.View()
+		
+		// Stitch them together horizontally
+		combinedView := lipgloss.JoinHorizontal(lipgloss.Top, listPane, previewPane)
+		
+		activeContent = panelStyle.Render(combinedView)
 	case viewNameInput:
 		headerTitle = " YGGDRASIL | Initialize Project "
 		inputPrompt := lipgloss.NewStyle().Foreground(textMain).Render("Project Name:")
