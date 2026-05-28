@@ -9,7 +9,45 @@ import (
 	"charm.land/bubbles/v2/list"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"go.yaml.in/yaml/v3"
+)
+
+var (
+  vikingOrange = lipgloss.Color("#FF8C00")
+  highlight    = lipgloss.Color("#FFA500")
+  textMain     = lipgloss.Color("#EEEEEE")
+  textSubtle   = lipgloss.Color("#555555")
+  borderSubtle = lipgloss.Color("#333333")
+
+  appStyle = lipgloss.NewStyle().Margin(1, 2)
+
+  headerStyle = lipgloss.NewStyle().
+          Foreground(lipgloss.Color("#000000")).
+          Background(vikingOrange).
+          Padding(0, 2).
+          Bold(true).
+          MarginBottom(1)
+
+  listTitleStyle = lipgloss.NewStyle().
+          Foreground(vikingOrange).
+          Bold(true).
+          Padding(0, 0, 1, 2)
+
+  panelStyle = lipgloss.NewStyle().
+          Border(lipgloss.RoundedBorder()).
+          BorderForeground(borderSubtle).
+          Padding(1, 2)
+
+  footerStyle = lipgloss.NewStyle().
+          Foreground(textSubtle).
+          MarginTop(1)
+
+  inputBoxStyle = lipgloss.NewStyle().
+          Border(lipgloss.RoundedBorder()).
+          BorderForeground(vikingOrange).
+          Padding(1).        
+          MarginTop(1)
 )
 
 // Read values from yaml config
@@ -239,10 +277,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle terminal resizing
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.sessionList.SetSize(msg.Width, msg.Height)
-		m.dirList.SetSize(msg.Width, msg.Height)
+    appW, appH := appStyle.GetFrameSize()
+
+    panelW, panelH := panelStyle.GetFrameSize()
+
+    headerAndFooterHeight := 4
+
+		m.width = msg.Width - appW - panelW
+		m.height = msg.Height - appH - panelH - headerAndFooterHeight
+
+		m.sessionList.SetSize(m.width, m.height)
+		m.dirList.SetSize(m.width, m.height)
 		return m, nil
 
 	case dirScanMsg:
@@ -342,21 +387,50 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
-	var content string
+	var activeContent string
+	var headerTitle string
 
+	// 1. Determine what the main content and header should be
 	switch m.activeView {
 	case viewSessionSelect:
-		content = m.sessionList.View()
+		headerTitle = " YGGDRASIL | Select Layout "
+		activeContent = panelStyle.Render(m.sessionList.View())
+
 	case viewDirBrowse:
-		content = m.dirList.View()
+		headerTitle = " YGGDRASIL | Target Directory "
+		activeContent = panelStyle.Render(m.dirList.View())
+
 	case viewNameInput:
-		content = m.textInput.View()
+		headerTitle = " YGGDRASIL | Initialize Project "
+		inputPrompt := lipgloss.NewStyle().Foreground(textMain).Render("Project Name:")
+		inputBox := inputBoxStyle.Render(m.textInput.View())
+		
+		rawContent := lipgloss.JoinVertical(lipgloss.Left, inputPrompt, inputBox)
+		activeContent = panelStyle.Render(rawContent)
+
 	default:
-		content = "Unknown state"
+		activeContent = "Unknown state"
 	}
 
-	v := tea.NewView(content)
+	// 2. Render Layout Components
+	header := headerStyle.Render(headerTitle)
+	
+	// A simple footer displaying the global editor setting
+	footerText := fmt.Sprintf("Editor: %s • ctrl+c: quit • esc: back", m.editor)
+	footer := footerStyle.Render(footerText)
 
+	// 3. Assemble the App
+	// We stack Header -> Content -> Footer
+	ui := lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		activeContent,
+		footer,
+	)
+
+	// Apply the outer margin
+	finalRender := appStyle.Render(ui)
+
+	v := tea.NewView(finalRender)
 	v.AltScreen = true
 
 	return v
@@ -382,8 +456,36 @@ func initialModel() model {
 		items[i] = session
 	}
 
+	// Build a custom delegate for a premium feel
+	delegate := list.NewDefaultDelegate()
+	
+	// Active Item: Viking Orange with a thick left border block
+	delegate.Styles.SelectedTitle = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(vikingOrange).
+		Foreground(vikingOrange).
+		Padding(0, 0, 0, 1).
+		Bold(true)
+		
+	delegate.Styles.SelectedDesc = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(vikingOrange).
+		Foreground(highlight).
+		Padding(0, 0, 0, 1)
+
+	// Inactive Items: Dimmed out so they fade into the background
+	delegate.Styles.NormalTitle = lipgloss.NewStyle().
+		Foreground(textMain).
+		Padding(0, 0, 0, 2)
+		
+	delegate.Styles.NormalDesc = lipgloss.NewStyle().
+		Foreground(textSubtle).
+		Padding(0, 0, 0, 2)
+
+
 	sessionList := list.New(items, list.NewDefaultDelegate(), 0, 0)
-	sessionList.Title = "Select Session ❯"
+  sessionList.Title = "Select Session ❯"
+  sessionList.Styles.Title = listTitleStyle
 	sessionList.SetShowStatusBar(false)
 	sessionList.SetFilteringEnabled(false)
 
@@ -393,8 +495,14 @@ func initialModel() model {
 	ti.CharLimit = 64
 	ti.SetWidth(40)
 
+  inputStyles := ti.Styles()
+  inputStyles.Focused.Prompt = lipgloss.NewStyle().Foreground(vikingOrange)
+  inputStyles.Focused.Text = lipgloss.NewStyle().Foreground(vikingOrange)
+  ti.SetStyles(inputStyles)
+
 	dirList := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
-	dirList.Title = "Select Project ❯"
+  dirList.Title = "Select Project ❯"
+  dirList.Styles.Title = listTitleStyle
 	dirList.SetShowStatusBar(true)
 
 	return model{
