@@ -464,10 +464,10 @@ func printBashWrapper() {
 ygg() {
   local output
   # Run the Yggdrasil binary and capture stdout
-  output = "$(yggdrasil "$@")"
+  output="$(yggdrasil "$@")"
 
   # Evaluate the returned commands in the current parent shell
-  if [-n "$output" ]; then
+  if [ -n "$output" ]; then
     eval "$output"
   fi
 }
