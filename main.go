@@ -109,9 +109,9 @@ func createDefaultConfig(path string) (Config, error) {
 					{
 						Name: "main",
 						Panes: []PaneConfig{
-							{Split: "vertical", Size: "33%", Command: ""}, // Empty command drops to default shell
+							{Split: "", Size: "", Command: ""}, // Empty command drops to default shell
+							{Split: "vertical", Size: "33%", Command: ""},
 							{Split: "horizontal", Size: "50%", Command: ""},
-							{Split: "horizontal", Size: "100%", Command: ""},
 						},
 					},
 				},
@@ -123,9 +123,10 @@ func createDefaultConfig(path string) (Config, error) {
 					{
 						Name: "main",
 						Panes: []PaneConfig{
-							{Split: "vertical", Size: "33%", Command: "{{editor}} ."},
+              {Split: "", Size: "", Command: "{{editor}} ."},
+							{Split: "vertical", Size: "30%", Command: ""},
+							{Split: "horizontal", Size: "66%", Command: ""},
 							{Split: "horizontal", Size: "50%", Command: ""},
-							{Split: "horizontal", Size: "25%", Command: ""},
 						},
 					},
 				},
@@ -155,8 +156,8 @@ func loadConfig() (Config, error) {
 		return cfg, fmt.Errorf("could not find home directory: %v", err)
 	}
 
-	configDir := filepath.Join(home, ".config")
-	configPath := filepath.Join(configDir, "yggdrasil.yaml")
+	configDir := filepath.Join(home, ".config", "yggdrasil")
+	configPath := filepath.Join(configDir, "config.yaml")
 
 	// Check if file exists, else create the default file
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
