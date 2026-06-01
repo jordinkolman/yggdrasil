@@ -17,36 +17,12 @@ Yggdrasil solves this by decoupling the UI from the execution:
 
 ## Installation
 
-Yggdrasil is distributed as a pre-built binary. Install it via your preferred package manager:
+Yggdrasil provides an automated installation script that detects your operating system and architecture, downloads the latest pre-compiled binary, and configures your shell environment.
 
-### macOS / Linux (Homebrew)
-```bash
-brew install jordinkolman/tap/yggdrasil
-```
-
-### Debian / Ubuntu (APT)
-```bash
-# Add the repository key and list (update URLs based on your hosting provider)
-curl -fsSL [https://your-repo-url.com/gpg](https://your-repo-url.com/gpg) | sudo tee /usr/share/keyrings/yggdrasil-archive-keyring.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/yggdrasil-archive-keyring.gpg] [https://your-repo-url.com/apt](https://your-repo-url.com/apt) stable main" | sudo tee /etc/apt/sources.list.d/yggdrasil.list
-
-sudo apt-get update
-sudo apt-get install yggdrasil
-```
-
-### Shell Configuration
-Once installed, add the shell hook to the bottom of your `~/.bashrc` to initialize the wrapper and trigger it on startup:
+Run the following command in your terminal:
 
 ```bash
-# Initialize Yggdrasil shell wrapper
-eval "$(yggdrasil init bash)"
-
-# Launch Yggdrasil on startup if not already inside a tmux session
-if [ -z "$TMUX" ]; then
-    ygg
-fi
-```
-
+curl -sSL [https://raw.githubusercontent.com/jordinkolman/yggdrasil/main/install.sh](https://raw.githubusercontent.com/jordinkolman/yggdrasil/main/install.sh) | bash
 
 ## Configuration
 
