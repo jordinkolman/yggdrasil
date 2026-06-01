@@ -15,40 +15,40 @@ import (
 )
 
 var (
-  vikingOrange = lipgloss.Color("#FF8C00")
-  highlight    = lipgloss.Color("#FFA500")
-  textMain     = lipgloss.Color("#EEEEEE")
-  textSubtle   = lipgloss.Color("#555555")
-  borderSubtle = lipgloss.Color("#333333")
+	vikingOrange = lipgloss.Color("#FF8C00")
+	highlight    = lipgloss.Color("#FFA500")
+	textMain     = lipgloss.Color("#EEEEEE")
+	textSubtle   = lipgloss.Color("#555555")
+	borderSubtle = lipgloss.Color("#333333")
 
-  appStyle = lipgloss.NewStyle().Margin(1, 2)
+	appStyle = lipgloss.NewStyle().Margin(1, 2)
 
-  headerStyle = lipgloss.NewStyle().
-          Foreground(lipgloss.Color("#000000")).
-          Background(vikingOrange).
-          Padding(0, 2).
-          Bold(true).
-          MarginBottom(1)
+	headerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#000000")).
+			Background(vikingOrange).
+			Padding(0, 2).
+			Bold(true).
+			MarginBottom(1)
 
-  listTitleStyle = lipgloss.NewStyle().
-          Foreground(vikingOrange).
-          Bold(true).
-          Padding(0, 0, 1, 2)
+	listTitleStyle = lipgloss.NewStyle().
+			Foreground(vikingOrange).
+			Bold(true).
+			Padding(0, 0, 1, 2)
 
-  panelStyle = lipgloss.NewStyle().
-          Border(lipgloss.RoundedBorder()).
-          BorderForeground(borderSubtle).
-          Padding(1, 2)
+	panelStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(borderSubtle).
+			Padding(1, 2)
 
-  footerStyle = lipgloss.NewStyle().
-          Foreground(textSubtle).
-          MarginTop(1)
+	footerStyle = lipgloss.NewStyle().
+			Foreground(textSubtle).
+			MarginTop(1)
 
-  inputBoxStyle = lipgloss.NewStyle().
-          Border(lipgloss.RoundedBorder()).
-          BorderForeground(vikingOrange).
-          Padding(1).        
-          MarginTop(1)
+	inputBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(vikingOrange).
+			Padding(1).
+			MarginTop(1)
 )
 
 // Read values from yaml config
@@ -81,7 +81,7 @@ type PaneConfig struct {
 type genericItem struct {
 	title string
 	desc  string
-  path  string
+	path  string
 }
 
 // tracks which screen is currently active
@@ -99,7 +99,7 @@ type model struct {
 	sessionList    list.Model
 	dirList        list.Model
 	textInput      textinput.Model
-  previewContent string
+	previewContent string
 
 	// --- App State ---
 	activeView       viewState
@@ -164,7 +164,7 @@ func createDefaultConfig(path string) (Config, error) {
 					{
 						Name: "main",
 						Panes: []PaneConfig{
-              {Split: "", Size: "", Command: "{{editor}} ."},
+							{Split: "", Size: "", Command: "{{editor}} ."},
 							{Split: "vertical", Size: "30%", Command: ""},
 							{Split: "horizontal", Size: "66%", Command: ""},
 							{Split: "horizontal", Size: "50%", Command: ""},
@@ -258,11 +258,11 @@ func readDir(targetPath string, isRoot bool) tea.Cmd {
 				continue
 			}
 
-      fullPath := filepath.Join(targetPath, name)
+			fullPath := filepath.Join(targetPath, name)
 			items = append(items, genericItem{
 				title: name,
 				desc:  fullPath,
-        path:  fullPath,
+				path:  fullPath,
 			})
 		}
 
@@ -271,16 +271,16 @@ func readDir(targetPath string, isRoot bool) tea.Cmd {
 }
 
 func generatePreview(path string) string {
-  if path == "" {
-    return lipgloss.NewStyle().Foreground(textSubtle).Render("No preview available")
-  }
+	if path == "" {
+		return lipgloss.NewStyle().Foreground(textSubtle).Render("No preview available")
+	}
 
-  info, err := os.Stat(path)
-  if err != nil || !info.IsDir() {
-    return lipgloss.NewStyle().Foreground(textSubtle).Render("Invalid directory")
-  }
+	info, err := os.Stat(path)
+	if err != nil || !info.IsDir() {
+		return lipgloss.NewStyle().Foreground(textSubtle).Render("Invalid directory")
+	}
 
-  entries, err := os.ReadDir(path)
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Render("Permission Denied.")
 	}
@@ -323,11 +323,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle terminal resizing
 	case tea.WindowSizeMsg:
-    appW, appH := appStyle.GetFrameSize()
+		appW, appH := appStyle.GetFrameSize()
 
-    panelW, panelH := panelStyle.GetFrameSize()
+		panelW, panelH := panelStyle.GetFrameSize()
 
-    headerAndFooterHeight := 4
+		headerAndFooterHeight := 4
 
 		m.width = msg.Width - appW - panelW
 		m.height = msg.Height - appH - panelH - headerAndFooterHeight
@@ -338,11 +338,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case dirScanMsg:
 		cmd = m.dirList.SetItems(msg)
-    m.dirList.Select(0)
+		m.dirList.Select(0)
 
-    if i, ok := m.dirList.SelectedItem().(genericItem); ok {
-      m.previewContent = generatePreview(i.path)
-    }
+		if i, ok := m.dirList.SelectedItem().(genericItem); ok {
+			m.previewContent = generatePreview(i.path)
+		}
 		return m, cmd
 
 	case errMsg:
@@ -371,7 +371,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.dirList.Title = "Browse ❯ " + m.currentBrowseDir
 
 					return m, readDir(m.currentBrowseDir, m.currentBrowseDir == m.workspaceDir)
-        }
+				}
 
 			// Step 2: User selects a directory
 			case viewDirBrowse:
@@ -381,8 +381,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					case "[Select This Directory]":
 						m.targetDir = m.currentBrowseDir
 						// default to directory name for tmux session name
-            rawName := filepath.Base(m.currentBrowseDir)
-            m.sessionName = strings.ReplaceAll(strings.ReplaceAll(rawName, ".", "_"), ":", "_")
+						rawName := filepath.Base(m.currentBrowseDir)
+						m.sessionName = strings.ReplaceAll(strings.ReplaceAll(rawName, ".", "_"), ":", "_")
 						return m, tea.Quit
 
 					case "[Create New Project Here]":
@@ -428,21 +428,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.activeView {
 	case viewSessionSelect:
 		m.sessionList, cmd = m.sessionList.Update(msg)
-    cmds = append(cmds, cmd)
+		cmds = append(cmds, cmd)
 
 	case viewDirBrowse:
-    oldIndex := m.dirList.Index()
+		oldIndex := m.dirList.Index()
 		m.dirList, cmd = m.dirList.Update(msg)
-    cmds = append(cmds, cmd)
+		cmds = append(cmds, cmd)
 
-  if m.dirList.Index() != oldIndex {
-      if i, ok := m.dirList.SelectedItem().(genericItem); ok {
-        m.previewContent = generatePreview(i.path)
-      }
-    }
+		if m.dirList.Index() != oldIndex {
+			if i, ok := m.dirList.SelectedItem().(genericItem); ok {
+				m.previewContent = generatePreview(i.path)
+			}
+		}
 	case viewNameInput:
 		m.textInput, cmd = m.textInput.Update(msg)
-    cmds = append(cmds, cmd)
+		cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -460,31 +460,30 @@ func (m model) View() tea.View {
 
 	case viewDirBrowse:
 		headerTitle = " YGGDRASIL | Target Directory "
-		
+
 		// Define the style for the right-hand preview pane
 		previewPaneStyle := lipgloss.NewStyle().
-			Width(m.width / 2).        // Consume the remaining 50% of the space
-			Height(m.height).          // Match the list height
+			Width(m.width/2).                                           // Consume the remaining 50% of the space
+			Height(m.height).                                           // Match the list height
 			Border(lipgloss.NormalBorder(), false, false, false, true). // Left border only
 			BorderForeground(borderSubtle).
 			Padding(0, 1, 0, 2)
-			
+
 		// Render the preview text inside the pane
 		previewPane := previewPaneStyle.Render(m.previewContent)
 
-		
 		// Render the list
 		listPane := m.dirList.View()
-		
+
 		// Stitch them together horizontally
 		combinedView := lipgloss.JoinHorizontal(lipgloss.Top, listPane, previewPane)
-		
+
 		activeContent = panelStyle.Render(combinedView)
 	case viewNameInput:
 		headerTitle = " YGGDRASIL | Initialize Project "
 		inputPrompt := lipgloss.NewStyle().Foreground(textMain).Render("Project Name:")
 		inputBox := inputBoxStyle.Render(m.textInput.View())
-		
+
 		rawContent := lipgloss.JoinVertical(lipgloss.Left, inputPrompt, inputBox)
 		activeContent = panelStyle.Render(rawContent)
 
@@ -494,7 +493,7 @@ func (m model) View() tea.View {
 
 	// 2. Render Layout Components
 	header := headerStyle.Render(headerTitle)
-	
+
 	// A simple footer displaying the global editor setting
 	footerText := fmt.Sprintf("Editor: %s • ctrl+c: quit • esc: back", m.editor)
 	footer := footerStyle.Render(footerText)
@@ -528,7 +527,7 @@ func initialModel() model {
 	cfg, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Config Error: %v\n", err)
-    os.Exit(1)
+		os.Exit(1)
 	}
 
 	items := make([]list.Item, len(cfg.Sessions))
@@ -538,7 +537,7 @@ func initialModel() model {
 
 	// Build a custom delegate for a premium feel
 	delegate := list.NewDefaultDelegate()
-	
+
 	// Active Item: Viking Orange with a thick left border block
 	delegate.Styles.SelectedTitle = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, false, true).
@@ -546,7 +545,7 @@ func initialModel() model {
 		Foreground(vikingOrange).
 		Padding(0, 0, 0, 1).
 		Bold(true)
-		
+
 	delegate.Styles.SelectedDesc = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, false, true).
 		BorderForeground(vikingOrange).
@@ -557,15 +556,14 @@ func initialModel() model {
 	delegate.Styles.NormalTitle = lipgloss.NewStyle().
 		Foreground(textMain).
 		Padding(0, 0, 0, 2)
-		
+
 	delegate.Styles.NormalDesc = lipgloss.NewStyle().
 		Foreground(textSubtle).
 		Padding(0, 0, 0, 2)
 
-
 	sessionList := list.New(items, delegate, 0, 0)
-  sessionList.Title = "Select Session ❯"
-  sessionList.Styles.Title = listTitleStyle
+	sessionList.Title = "Select Session ❯"
+	sessionList.Styles.Title = listTitleStyle
 	sessionList.SetShowStatusBar(false)
 	sessionList.SetFilteringEnabled(false)
 
@@ -575,22 +573,22 @@ func initialModel() model {
 	ti.CharLimit = 64
 	ti.SetWidth(40)
 
-  validProjectName := regexp.MustCompile(`[a-zA-Z0-9_-]*$`)
-  ti.Validate = func(s string) error {
-    if !validProjectName.MatchString(s) {
-      return fmt.Errorf("invalid character")
-    }
-    return nil
-  }
+	validProjectName := regexp.MustCompile(`[a-zA-Z0-9_-]*$`)
+	ti.Validate = func(s string) error {
+		if !validProjectName.MatchString(s) {
+			return fmt.Errorf("invalid character")
+		}
+		return nil
+	}
 
-  inputStyles := ti.Styles()
-  inputStyles.Focused.Prompt = lipgloss.NewStyle().Foreground(vikingOrange)
-  inputStyles.Focused.Text = lipgloss.NewStyle().Foreground(vikingOrange)
-  ti.SetStyles(inputStyles)
+	inputStyles := ti.Styles()
+	inputStyles.Focused.Prompt = lipgloss.NewStyle().Foreground(vikingOrange)
+	inputStyles.Focused.Text = lipgloss.NewStyle().Foreground(vikingOrange)
+	ti.SetStyles(inputStyles)
 
 	dirList := list.New([]list.Item{}, delegate, 0, 0)
-  dirList.Title = "Select Project ❯"
-  dirList.Styles.Title = listTitleStyle
+	dirList.Title = "Select Project ❯"
+	dirList.Styles.Title = listTitleStyle
 	dirList.SetShowStatusBar(true)
 
 	return model{
