@@ -561,7 +561,7 @@ func initialModel() model {
 		Padding(0, 0, 0, 2)
 
 
-	sessionList := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	sessionList := list.New(items, delegate, 0, 0)
   sessionList.Title = "Select Session ❯"
   sessionList.Styles.Title = listTitleStyle
 	sessionList.SetShowStatusBar(false)
@@ -578,7 +578,7 @@ func initialModel() model {
   inputStyles.Focused.Text = lipgloss.NewStyle().Foreground(vikingOrange)
   ti.SetStyles(inputStyles)
 
-	dirList := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
+	dirList := list.New([]list.Item{}, delegate, 0, 0)
   dirList.Title = "Select Project ❯"
   dirList.Styles.Title = listTitleStyle
 	dirList.SetShowStatusBar(true)
