@@ -1,0 +1,33 @@
+version: 2
+project_name: yggdrasil
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    # This dictates how the final downloaded files are named
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+
+      - '^test:'
