@@ -31,11 +31,11 @@ On first run, Yggdrasil generates a default configuration file at `~/.config/ygg
 WARNING: Always verify third-party config files before copying. Third-party configurations can be used by malicious actors to gain access to your system.
 
 You can define your global editor and map out unlimited Tmux sessions, windows, and pane splits. Use the `{{editor}}` tag in any command block to dynamically inject your preferred tooling.
-
+The 'command' field can be used to declare any custom script to run inside that pane on launch
 
 ```yaml
 settings:
-  editor: lvim
+  editor: vim
 sessions:
   - name: "[New] Coding Session"
     description: "1 Large Pane (Editor) + 3 Vertically Stacked"
@@ -50,7 +50,7 @@ sessions:
             command: ""
           - split: "horizontal"
             size: "25%"
-            command: "notion_daily.sh"
+            command: ""
 ```
 
 
