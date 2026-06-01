@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"charm.land/bubbles/v2/list"
@@ -380,7 +381,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					case "[Select This Directory]":
 						m.targetDir = m.currentBrowseDir
 						// default to directory name for tmux session name
-						m.sessionName = filepath.Base(m.currentBrowseDir)
+            rawName := filepath.Base(m.currentBrowseDir)
+            m.sessionName = strings.ReplaceAll(strings.ReplaceAll(rawName, ".", "_"), ":", "_")
 						return m, tea.Quit
 
 					case "[Create New Project Here]":
@@ -522,11 +524,11 @@ func initialModel() model {
 	}
 	workspace := filepath.Join(home, "workspace")
 
-	//! FIXME: Handle this gracefully
 	// 2. Build the static session options
 	cfg, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Config Error: %v\n", err)
+    os.Exit(1)
 	}
 
 	items := make([]list.Item, len(cfg.Sessions))
@@ -572,6 +574,14 @@ func initialModel() model {
 	ti.Focus()
 	ti.CharLimit = 64
 	ti.SetWidth(40)
+
+  validProjectName := regexp.MustCompile(`[a-zA-Z0-9_-]*$`)
+  ti.Validate = func(s string) error {
+    if !validProjectName.MatchString(s) {
+      return fmt.Errorf("invalid character")
+    }
+    return nil
+  }
 
   inputStyles := ti.Styles()
   inputStyles.Focused.Prompt = lipgloss.NewStyle().Foreground(vikingOrange)
