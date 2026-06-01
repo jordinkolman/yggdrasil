@@ -23,6 +23,7 @@ Run the following command in your terminal:
 
 ```bash
 curl -sSL [https://raw.githubusercontent.com/jordinkolman/yggdrasil/main/install.sh](https://raw.githubusercontent.com/jordinkolman/yggdrasil/main/install.sh) | bash
+```
 
 ## Configuration
 
